@@ -40,7 +40,14 @@ cp .env.example .env.local
 - `NEXT_PUBLIC_SUPABASE_ANON_KEY`
 - `SUPABASE_SERVICE_ROLE_KEY`
 
-4. Apply the migration in [supabase/migrations/202603141200_init.sql](/D:/paycargo-blueprint/supabase/migrations/202603141200_init.sql).
+4. Apply every SQL migration in `supabase/migrations` in timestamp order.
+   If you are using the Supabase SQL editor manually, run:
+   `202603141200_init.sql`
+   `202603141500_fix_auth_profile_resolution.sql`
+   `202603141640_grant_public_schema_api_roles.sql`
+   `202603141710_fix_auth_trigger_permissions.sql`
+
+   The last two are required to avoid `permission denied for schema public` during signup and server-side data access.
 
 5. Start the app:
 
@@ -58,4 +65,4 @@ npm run dev
 
 ## Deployment
 
-Deploy directly to Vercel. Add the three Supabase environment variables in the Vercel project settings and ensure the Supabase migration has been applied before the first production run.
+Deploy directly to Vercel. Add the three Supabase environment variables in the Vercel project settings and ensure the full Supabase migration set has been applied before the first production run.

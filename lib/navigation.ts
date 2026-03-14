@@ -1,15 +1,19 @@
 import type { Route } from "next";
 import type { LucideIcon } from "lucide-react";
 import {
+  AlertTriangle,
   Bell,
   Building2,
+  ShieldCheck,
   CreditCard,
   FileText,
   LayoutDashboard,
   Package,
   Receipt,
   Settings,
-  ShipWheel
+  ShipWheel,
+  Truck,
+  Warehouse
 } from "lucide-react";
 
 export type NavItem = {
@@ -26,6 +30,10 @@ export const primaryNavigation: NavItem[] = [
   { href: "/shipments", label: "Shipments", icon: ShipWheel },
   { href: "/containers", label: "Containers", icon: Package },
   { href: "/documents", label: "Documents", icon: FileText },
+  { href: "/compliance", label: "Compliance", icon: ShieldCheck },
+  { href: "/disputes", label: "Disputes", icon: AlertTriangle },
+  { href: "/terminals", label: "Terminals", icon: Warehouse },
+  { href: "/carriers", label: "Carriers", icon: Truck },
   { href: "/notifications", label: "Notifications", icon: Bell },
   { href: "/settings", label: "Settings", icon: Settings }
 ];

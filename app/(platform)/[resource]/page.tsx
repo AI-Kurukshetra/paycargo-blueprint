@@ -17,7 +17,7 @@ export default function ResourcePage({
   return (
     <div className="space-y-6">
       {params.resource === "documents" ? <DocumentUploadForm /> : null}
-      <ResourceWorkspace config={config} />
+      <ResourceWorkspace config={config} showForm={params.resource !== "documents"} />
     </div>
   );
 }

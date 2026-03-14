@@ -27,8 +27,8 @@ export function AppShell({
   return (
     <div className="min-h-screen">
       <div className="mx-auto flex max-w-[1600px] gap-6 px-4 py-6 lg:px-8">
-        <aside className="surface sticky top-6 hidden h-[calc(100vh-3rem)] w-72 flex-col justify-between p-5 lg:flex">
-          <div>
+        <aside className="surface sticky top-6 hidden h-[calc(100vh-3rem)] w-72 overflow-hidden p-5 lg:flex lg:flex-col">
+          <div className="flex min-h-0 flex-1 flex-col">
             <div className="rounded-2xl bg-ink px-5 py-6 text-white">
               <p className="text-xs uppercase tracking-[0.3em] text-white/70">PayCargo Blueprint</p>
               <h1 className="mt-3 font-[var(--font-serif)] text-3xl">Freight cashflow control</h1>
@@ -36,7 +36,7 @@ export function AppShell({
                 Multi-modal invoice, payment, release, and compliance operations.
               </p>
             </div>
-            <nav className="mt-6 space-y-1">
+            <nav className="mt-6 min-h-0 flex-1 space-y-1 overflow-y-auto pr-1">
               {primaryNavigation.map((item) => {
                 const Icon = item.icon;
                 const active = pathname.startsWith(item.href);
@@ -68,7 +68,7 @@ export function AppShell({
               </Link>
             </nav>
           </div>
-          <div className="rounded-2xl border border-slate-200 p-4">
+          <div className="mt-4 shrink-0 rounded-2xl border border-slate-200 p-4">
             <p className="text-sm font-semibold text-ink">{profile.full_name}</p>
             <p className="text-sm text-slate-500">{profile.email}</p>
             <p className="mt-2 text-xs uppercase tracking-[0.24em] text-tide">{profile.role}</p>

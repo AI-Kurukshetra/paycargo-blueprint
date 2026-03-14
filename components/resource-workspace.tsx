@@ -4,7 +4,7 @@ import { useEffect, useMemo, useState, type FormEvent } from "react";
 import { Pencil, Plus, Trash2 } from "lucide-react";
 import { StatusBadge } from "@/components/status-badge";
 import type { ResourceViewConfig } from "@/lib/domain/resource-views";
-import { cn, formatDate } from "@/lib/utils";
+import { cn, formatDate, isIsoDateString } from "@/lib/utils";
 
 type ResourceRecord = Record<string, unknown> & { id: string };
 type SelectOptions = Record<string, Array<{ label: string; value: string }>>;
@@ -21,7 +21,13 @@ function coerceValue(type: ResourceViewConfig["fields"][number]["type"], value: 
   return value ? String(value) : "";
 }
 
-export function ResourceWorkspace({ config }: { config: ResourceViewConfig }): JSX.Element {
+export function ResourceWorkspace({
+  config,
+  showForm = true
+}: {
+  config: ResourceViewConfig;
+  showForm?: boolean;
+}): JSX.Element {
   const [records, setRecords] = useState<ResourceRecord[]>([]);
   const [draft, setDraft] = useState<ResourceRecord | null>(null);
   const [loading, setLoading] = useState(true);
@@ -79,10 +85,11 @@ export function ResourceWorkspace({ config }: { config: ResourceViewConfig }): J
 
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
+    const form = event.currentTarget;
     setSubmitting(true);
     setError(null);
 
-    const formData = new FormData(event.currentTarget);
+    const formData = new FormData(form);
     const payload = config.fields.reduce<Record<string, unknown>>((accumulator, field) => {
       const rawValue = formData.get(field.name);
       const coerced = coerceValue(field.type, rawValue);
@@ -106,7 +113,7 @@ export function ResourceWorkspace({ config }: { config: ResourceViewConfig }): J
         throw new Error(responseBody?.error?.message ?? "Request failed.");
       }
 
-      event.currentTarget.reset();
+      form.reset();
       setDraft(null);
       await loadRecords();
     } catch (caughtError) {
@@ -169,7 +176,7 @@ export function ResourceWorkspace({ config }: { config: ResourceViewConfig }): J
                         <td key={column.key} className="px-6 py-4 text-sm text-slate-700">
                           {typeof value === "string" && (value.includes("pending") || value.includes("active") || value.includes("paid") || value.includes("released") || value.includes("failed") || value.includes("approved")) ? (
                             <StatusBadge value={value} />
-                          ) : typeof value === "string" && value.includes("T") ? (
+                          ) : typeof value === "string" && isIsoDateString(value) ? (
                             formatDate(value)
                           ) : (
                             String(value ?? "—")
@@ -203,7 +210,8 @@ export function ResourceWorkspace({ config }: { config: ResourceViewConfig }): J
         </div>
       </section>
 
-      <section className="surface p-6">
+      {showForm ? (
+        <section className="surface p-6">
         <div className="flex items-start justify-between gap-4">
           <div>
             <p className="section-title">{mode === "edit" ? "Update record" : "Create record"}</p>
@@ -226,7 +234,11 @@ export function ResourceWorkspace({ config }: { config: ResourceViewConfig }): J
           )}
         </div>
 
-        <form className="mt-6 space-y-4" onSubmit={(event) => void handleSubmit(event)}>
+        <form
+          key={draft?.id ?? "create"}
+          className="mt-6 space-y-4"
+          onSubmit={(event) => void handleSubmit(event)}
+        >
           {config.fields.map((field) => {
             const defaultValue = draft ? String(draft[field.name] ?? "") : "";
             const options = field.options ?? selectOptions[field.name] ?? [];
@@ -237,6 +249,7 @@ export function ResourceWorkspace({ config }: { config: ResourceViewConfig }): J
                 {field.type === "select" ? (
                   <select
                     name={field.name}
+                    required={field.required}
                     defaultValue={defaultValue}
                     className="w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm text-ink outline-none transition focus:border-tide"
                   >
@@ -250,6 +263,7 @@ export function ResourceWorkspace({ config }: { config: ResourceViewConfig }): J
                 ) : field.type === "textarea" ? (
                   <textarea
                     name={field.name}
+                    required={field.required}
                     defaultValue={defaultValue}
                     placeholder={field.placeholder}
                     className="min-h-28 w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm text-ink outline-none transition focus:border-tide"
@@ -281,7 +295,8 @@ export function ResourceWorkspace({ config }: { config: ResourceViewConfig }): J
             {submitting ? "Saving..." : draft ? "Save changes" : "Create record"}
           </button>
         </form>
-      </section>
+        </section>
+      ) : null}
     </div>
   );
 }

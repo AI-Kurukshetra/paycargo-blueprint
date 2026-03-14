@@ -30,6 +30,7 @@ Thumbs.db
 
 # supabase local files
 .supabase
+supabase/.temp/
 
 # coverage
 coverage

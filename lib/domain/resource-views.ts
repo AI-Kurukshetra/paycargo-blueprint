@@ -152,6 +152,7 @@ export const resourceViewConfigs: Record<string, ResourceViewConfig> = {
         name: "mode",
         label: "Mode",
         type: "select",
+        required: true,
         options: [
           { label: "Ocean", value: "ocean" },
           { label: "Air", value: "air" },
@@ -293,6 +294,7 @@ export const resourceViewConfigs: Record<string, ResourceViewConfig> = {
         name: "record_type",
         label: "Record type",
         type: "select",
+        required: true,
         options: [
           { label: "KYC", value: "kyc" },
           { label: "AML", value: "aml" },
@@ -374,6 +376,7 @@ export const resourceViewConfigs: Record<string, ResourceViewConfig> = {
         name: "mode",
         label: "Mode",
         type: "select",
+        required: true,
         options: [
           { label: "Ocean", value: "ocean" },
           { label: "Air", value: "air" },
@@ -400,6 +403,7 @@ export const resourceViewConfigs: Record<string, ResourceViewConfig> = {
         name: "method_type",
         label: "Method type",
         type: "select",
+        required: true,
         options: [
           { label: "ACH", value: "ach" },
           { label: "Wire", value: "wire" },

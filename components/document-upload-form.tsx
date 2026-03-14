@@ -45,6 +45,7 @@ export function DocumentUploadForm(): JSX.Element {
 
     if (response.ok) {
       setStatus("Upload complete and document metadata saved.");
+      window.location.reload();
     } else {
       setStatus("File uploaded, but metadata save failed.");
     }

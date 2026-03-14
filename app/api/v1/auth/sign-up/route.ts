@@ -10,6 +10,8 @@ const signUpSchema = z.object({
   password: z.string().min(8)
 });
 
+const MISSING_PUBLIC_SCHEMA_PERMISSION = "permission denied for schema public";
+
 function slugify(value: string): string {
   return value
     .toLowerCase()
@@ -17,6 +19,40 @@ function slugify(value: string): string {
     .replace(/[^a-z0-9]+/g, "-")
     .replace(/^-+|-+$/g, "")
     .slice(0, 40);
+}
+
+async function cleanupFailedSignUp(
+  supabase: ReturnType<typeof createSupabaseServiceClient>,
+  userId: string,
+  organizationId?: string
+) {
+  if (organizationId) {
+    await supabase.from("organizations").delete().eq("id", organizationId);
+  }
+
+  await supabase.auth.admin.deleteUser(userId);
+}
+
+function mapSignUpError(message: string | undefined, fallbackMessage: string): { message: string; status: number } {
+  if (!message) {
+    return {
+      message: fallbackMessage,
+      status: 400
+    };
+  }
+
+  if (message.toLowerCase().includes(MISSING_PUBLIC_SCHEMA_PERMISSION)) {
+    return {
+      message:
+        "Database permissions are out of date. Apply the latest Supabase migrations, including the public schema grant fixes, then try signing up again.",
+      status: 500
+    };
+  }
+
+  return {
+    message,
+    status: 400
+  };
 }
 
 export async function POST(request: Request) {
@@ -37,8 +73,11 @@ export async function POST(request: Request) {
     });
 
     if (authError || !authData.user) {
-      return errorResponse(authError?.message ?? "Failed to create user account.", 400);
+      const failure = mapSignUpError(authError?.message, "Failed to create user account.");
+      return errorResponse(failure.message, failure.status);
     }
+
+    const createdUserId = authData.user.id;
 
     const { data: organization, error: organizationError } = await supabase
       .from("organizations")
@@ -55,12 +94,14 @@ export async function POST(request: Request) {
       .single();
 
     if (organizationError || !organization) {
-      return errorResponse(organizationError?.message ?? "Failed to create organization.", 400);
+      await cleanupFailedSignUp(supabase, createdUserId);
+      const failure = mapSignUpError(organizationError?.message, "Failed to create organization.");
+      return errorResponse(failure.message, failure.status);
     }
 
     const { error: profileError } = await supabase.from("users").upsert(
       {
-        id: authData.user.id,
+        id: createdUserId,
         organization_id: organization.id,
         email: payload.email,
         full_name: payload.fullName,
@@ -73,13 +114,15 @@ export async function POST(request: Request) {
     );
 
     if (profileError) {
-      return errorResponse(profileError.message, 400);
+      await cleanupFailedSignUp(supabase, createdUserId, organization.id);
+      const failure = mapSignUpError(profileError.message, "Failed to create user profile.");
+      return errorResponse(failure.message, failure.status);
     }
 
     const { error: membershipError } = await supabase.from("organization_memberships").upsert(
       {
         organization_id: organization.id,
-        user_id: authData.user.id,
+        user_id: createdUserId,
         role: "admin",
         is_primary: true
       },
@@ -89,12 +132,14 @@ export async function POST(request: Request) {
     );
 
     if (membershipError) {
-      return errorResponse(membershipError.message, 400);
+      await cleanupFailedSignUp(supabase, createdUserId, organization.id);
+      const failure = mapSignUpError(membershipError.message, "Failed to create organization membership.");
+      return errorResponse(failure.message, failure.status);
     }
 
     await supabase.from("notifications").insert({
       organization_id: organization.id,
-      user_id: authData.user.id,
+      user_id: createdUserId,
       type: "system",
       title: "Workspace ready",
       message: `Organization ${organization.name} is ready for invoice and payment operations.`,
@@ -106,7 +151,7 @@ export async function POST(request: Request) {
 
     return created({
       data: {
-        userId: authData.user.id,
+        userId: createdUserId,
         organizationId: organization.id,
         organizationSlug: organization.slug
       }
@@ -116,6 +161,7 @@ export async function POST(request: Request) {
       return errorResponse(error.issues.map((issue) => issue.message).join(", "), 400);
     }
 
-    return errorResponse(error instanceof Error ? error.message : "Sign-up failed.", 400);
+    const failure = mapSignUpError(error instanceof Error ? error.message : undefined, "Sign-up failed.");
+    return errorResponse(failure.message, failure.status);
   }
 }

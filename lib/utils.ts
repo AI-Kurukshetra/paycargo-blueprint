@@ -25,6 +25,10 @@ export function formatDate(value: string | Date): string {
   }).format(new Date(value));
 }
 
+export function isIsoDateString(value: string): boolean {
+  return /^\d{4}-\d{2}-\d{2}(?:[T\s].*)?$/.test(value) && !Number.isNaN(Date.parse(value));
+}
+
 export function toTitleCase(value: string): string {
   return value
     .split(/[_-\s]+/)
