@@ -15,6 +15,7 @@ type CrudTable<Row, Insert = Partial<Row>, Update = Partial<Insert>> = {
   Row: Row;
   Insert: Insert;
   Update: Update;
+  Relationships: [];
 };
 
 type UserRole = "admin" | "payer" | "vendor" | "approver" | "viewer";

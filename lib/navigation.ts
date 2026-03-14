@@ -1,3 +1,4 @@
+import type { Route } from "next";
 import type { LucideIcon } from "lucide-react";
 import {
   Bell,
@@ -12,7 +13,7 @@ import {
 } from "lucide-react";
 
 export type NavItem = {
-  href: string;
+  href: Route;
   label: string;
   icon: LucideIcon;
 };

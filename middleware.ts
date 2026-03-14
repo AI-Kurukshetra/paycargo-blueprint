@@ -1,11 +1,11 @@
-import { createServerClient } from "@supabase/ssr";
+import { createServerClient, type CookieOptions } from "@supabase/ssr";
 import { NextResponse, type NextRequest } from "next/server";
 import { publicEnv } from "@/lib/public-env";
 
 const PUBLIC_PATHS = new Set(["/sign-in", "/api/v1/auth/callback"]);
 
 export async function middleware(request: NextRequest): Promise<NextResponse> {
-  const response = NextResponse.next({
+  let response = NextResponse.next({
     request
   });
 
@@ -17,7 +17,15 @@ export async function middleware(request: NextRequest): Promise<NextResponse> {
         getAll() {
           return request.cookies.getAll();
         },
-        setAll(cookiesToSet) {
+        setAll(cookiesToSet: Array<{ name: string; value: string; options: CookieOptions }>) {
+          cookiesToSet.forEach(({ name, value }) => {
+            request.cookies.set(name, value);
+          });
+
+          response = NextResponse.next({
+            request
+          });
+
           cookiesToSet.forEach(({ name, value, options }) => {
             response.cookies.set(name, value, options);
           });
@@ -38,9 +46,13 @@ export async function middleware(request: NextRequest): Promise<NextResponse> {
     const signInUrl = request.nextUrl.clone();
     signInUrl.pathname = "/sign-in";
     signInUrl.searchParams.set("redirectTo", pathname);
-    return NextResponse.redirect(signInUrl);
+
+    const redirectResponse = NextResponse.redirect(signInUrl);
+    redirectResponse.headers.set("Cache-Control", "private, no-store");
+    return redirectResponse;
   }
 
+  response.headers.set("Cache-Control", "private, no-store");
   return response;
 }
 

@@ -3,6 +3,7 @@ import { StatusBadge } from "@/components/status-badge";
 import { requireUserProfile } from "@/lib/auth/session";
 import { getDashboardAnalytics } from "@/lib/services/analytics";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
+import type { Database } from "@/types/database";
 import { formatCurrency } from "@/lib/utils";
 
 export default async function DashboardPage(): Promise<JSX.Element> {
@@ -24,6 +25,19 @@ export default async function DashboardPage(): Promise<JSX.Element> {
       .order("created_at", { ascending: false })
       .limit(5)
   ]);
+
+  const invoiceRows = (recentInvoices.data ?? []) as Array<
+    Pick<
+      Database["public"]["Tables"]["invoices"]["Row"],
+      "id" | "invoice_number" | "total_amount" | "status" | "approval_status"
+    >
+  >;
+  const notificationRows = (recentNotifications.data ?? []) as Array<
+    Pick<
+      Database["public"]["Tables"]["notifications"]["Row"],
+      "id" | "title" | "message" | "status" | "created_at"
+    >
+  >;
 
   return (
     <div className="space-y-6">
@@ -77,7 +91,7 @@ export default async function DashboardPage(): Promise<JSX.Element> {
             <p className="section-title">Recent Invoices</p>
           </div>
           <div className="divide-y divide-slate-100">
-            {(recentInvoices.data ?? []).map((invoice) => (
+            {invoiceRows.map((invoice) => (
               <div key={invoice.id} className="flex items-center justify-between gap-4 px-6 py-4">
                 <div>
                   <p className="font-medium text-ink">{invoice.invoice_number}</p>
@@ -97,7 +111,7 @@ export default async function DashboardPage(): Promise<JSX.Element> {
             <p className="section-title">Workflow Notices</p>
           </div>
           <div className="divide-y divide-slate-100">
-            {(recentNotifications.data ?? []).map((notification) => (
+            {notificationRows.map((notification) => (
               <div key={notification.id} className="px-6 py-4">
                 <div className="flex items-center justify-between gap-4">
                   <p className="font-medium text-ink">{notification.title}</p>

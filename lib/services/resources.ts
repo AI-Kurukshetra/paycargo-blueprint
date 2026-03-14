@@ -28,11 +28,13 @@ import {
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { createSupabaseServiceClient } from "@/lib/supabase/service";
 import { calculateFraudScore, handlePaymentWorkflow } from "@/lib/services/workflows";
-import type { Database, TableName } from "@/types/database";
+import type { Database, Json, TableName } from "@/types/database";
 
 type SchemaMap = {
   [Key in TableName]?: ZodSchema<unknown>;
 };
+
+type TableRow<T extends TableName> = Database["public"]["Tables"][T]["Row"];
 
 const schemaMap: SchemaMap = {
   organizations: organizationSchema,
@@ -77,7 +79,6 @@ const orgScopedTables = new Set<TableName>([
   "payment_methods",
   "exchange_rates",
   "credit_profiles",
-  "organizations",
   "users"
 ]);
 
@@ -243,20 +244,22 @@ export async function createResource(
       .select("*")
       .single();
 
-    if (error) {
-      throw new Error(error.message);
+    const createdRow = data as TableRow<typeof resource> | null;
+
+    if (error || !createdRow) {
+      throw new Error(error?.message ?? `Failed to create ${resource}.`);
     }
 
     await supabase.from("audit_logs").insert({
       organization_id: profile.organization_id,
       user_id: profile.id,
       entity_type: resource,
-      entity_id: data.id,
+      entity_id: createdRow.id,
       action: `${resource}.created`,
-      after_data: normalizedPayload
+      after_data: normalizedPayload as Json
     });
 
-    return data;
+    return createdRow;
   } catch (error) {
     if (error instanceof ZodError) {
       throw new Error(error.issues.map((issue) => issue.message).join(", "));
@@ -288,8 +291,10 @@ export async function updateResource(
     .select("*")
     .single();
 
-  if (error) {
-    throw new Error(error.message);
+  const updatedRow = data as TableRow<typeof resource> | null;
+
+  if (error || !updatedRow) {
+    throw new Error(error?.message ?? `Failed to update ${resource}.`);
   }
 
   await supabase.from("audit_logs").insert({
@@ -298,10 +303,10 @@ export async function updateResource(
     entity_type: resource,
     entity_id: id,
     action: `${resource}.updated`,
-    after_data: payload
+    after_data: payload as Json
   });
 
-  return data;
+  return updatedRow;
 }
 
 export async function deleteResource(resource: TableName, id: string, profile: UserProfile) {

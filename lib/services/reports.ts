@@ -1,8 +1,12 @@
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import type { UserProfile } from "@/lib/auth/session";
+import type { Database } from "@/types/database";
 
 export async function getOperationsReport(profile: UserProfile) {
   const supabase = createSupabaseServerClient();
+  type FeeMetrics = Pick<Database["public"]["Tables"]["fees"]["Row"], "amount" | "status">;
+  type DisputeMetrics = Pick<Database["public"]["Tables"]["disputes"]["Row"], "status">;
+  type ComplianceMetrics = Pick<Database["public"]["Tables"]["compliance_records"]["Row"], "status">;
 
   const [fees, disputes, compliance] = await Promise.all([
     supabase.from("fees").select("fee_type,amount,status").eq("organization_id", profile.organization_id ?? ""),
@@ -13,15 +17,19 @@ export async function getOperationsReport(profile: UserProfile) {
       .eq("organization_id", profile.organization_id ?? "")
   ]);
 
+  const feeRows = (fees.data ?? []) as FeeMetrics[];
+  const disputeRows = (disputes.data ?? []) as DisputeMetrics[];
+  const complianceRows = (compliance.data ?? []) as ComplianceMetrics[];
+
   return {
-    openFeeExposure: (fees.data ?? [])
+    openFeeExposure: feeRows
       .filter((item) => item.status === "open")
       .reduce((sum, item) => sum + Number(item.amount), 0),
-    paidFeeTotal: (fees.data ?? [])
+    paidFeeTotal: feeRows
       .filter((item) => item.status === "paid")
       .reduce((sum, item) => sum + Number(item.amount), 0),
-    openDisputes: (disputes.data ?? []).filter((item) => item.status !== "closed").length,
-    complianceFailures: (compliance.data ?? []).filter((item) => item.status === "failed").length,
-    complianceExpiring: (compliance.data ?? []).filter((item) => item.status === "expired").length
+    openDisputes: disputeRows.filter((item) => item.status !== "closed").length,
+    complianceFailures: complianceRows.filter((item) => item.status === "failed").length,
+    complianceExpiring: complianceRows.filter((item) => item.status === "expired").length
   };
 }

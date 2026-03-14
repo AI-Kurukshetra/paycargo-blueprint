@@ -2,6 +2,9 @@ import { ResourceWorkspace } from "@/components/resource-workspace";
 import { resourceViewConfigs } from "@/lib/domain/resource-views";
 
 export default function SettingsPage(): JSX.Element {
+  const paymentMethodsConfig = resourceViewConfigs["payment-methods"]!;
+  const bankAccountsConfig = resourceViewConfigs["bank-accounts"]!;
+
   return (
     <div className="space-y-6">
       <section className="surface p-8">
@@ -11,8 +14,8 @@ export default function SettingsPage(): JSX.Element {
           Configure the stored payment instruments and bank accounts used by the payer organization.
         </p>
       </section>
-      <ResourceWorkspace config={resourceViewConfigs["payment-methods"]} />
-      <ResourceWorkspace config={resourceViewConfigs["bank-accounts"]} />
+      <ResourceWorkspace config={paymentMethodsConfig} />
+      <ResourceWorkspace config={bankAccountsConfig} />
     </div>
   );
 }

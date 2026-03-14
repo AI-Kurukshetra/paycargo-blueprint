@@ -412,6 +412,7 @@ begin
 end;
 $$;
 
+drop trigger if exists trigger_release_cargo_on_paid_payment on public.payments;
 create trigger trigger_release_cargo_on_paid_payment
 after update on public.payments
 for each row
@@ -446,10 +447,13 @@ create or replace function public.current_org_id()
 returns uuid
 language sql
 stable
+security definer
+set search_path = public
 as $$
   select organization_id
-  from public.users
-  where id = auth.uid()
+  from public.organization_memberships
+  where user_id = auth.uid()
+  order by is_primary desc, created_at asc
   limit 1;
 $$;
 
@@ -498,7 +502,6 @@ begin
     'invoices',
     'payments',
     'shipments',
-    'transactions',
     'documents',
     'audit_logs',
     'compliance_records',
@@ -521,6 +524,42 @@ begin
   end loop;
 end
 $$;
+
+drop policy if exists "transactions access via payment or invoice" on public.transactions;
+create policy "transactions access via payment or invoice" on public.transactions
+for all using (
+  exists (
+    select 1
+    from public.payments
+    where public.payments.id = transactions.payment_id
+      and public.payments.organization_id = public.current_org_id()
+  )
+  or exists (
+    select 1
+    from public.invoices
+    where public.invoices.id = transactions.invoice_id
+      and public.invoices.organization_id = public.current_org_id()
+  )
+)
+with check (
+  exists (
+    select 1
+    from public.payments
+    where public.payments.id = transactions.payment_id
+      and public.payments.organization_id = public.current_org_id()
+  )
+  or exists (
+    select 1
+    from public.invoices
+    where public.invoices.id = transactions.invoice_id
+      and public.invoices.organization_id = public.current_org_id()
+  )
+);
+
+drop policy if exists "exchange rates readable by authenticated users" on public.exchange_rates;
+create policy "exchange rates readable by authenticated users" on public.exchange_rates
+for select to authenticated
+using (true);
 
 create policy "shipment access via org" on public.containers
 for all using (
@@ -554,37 +593,61 @@ with check (
   )
 );
 
+drop trigger if exists organizations_set_updated_at on public.organizations;
 create trigger organizations_set_updated_at before update on public.organizations for each row execute function public.set_updated_at();
+drop trigger if exists users_set_updated_at on public.users;
 create trigger users_set_updated_at before update on public.users for each row execute function public.set_updated_at();
+drop trigger if exists organization_memberships_set_updated_at on public.organization_memberships;
 create trigger organization_memberships_set_updated_at before update on public.organization_memberships for each row execute function public.set_updated_at();
+drop trigger if exists terminals_set_updated_at on public.terminals;
 create trigger terminals_set_updated_at before update on public.terminals for each row execute function public.set_updated_at();
+drop trigger if exists carriers_set_updated_at on public.carriers;
 create trigger carriers_set_updated_at before update on public.carriers for each row execute function public.set_updated_at();
+drop trigger if exists routes_set_updated_at on public.routes;
 create trigger routes_set_updated_at before update on public.routes for each row execute function public.set_updated_at();
+drop trigger if exists vendors_set_updated_at on public.vendors;
 create trigger vendors_set_updated_at before update on public.vendors for each row execute function public.set_updated_at();
+drop trigger if exists shipments_set_updated_at on public.shipments;
 create trigger shipments_set_updated_at before update on public.shipments for each row execute function public.set_updated_at();
+drop trigger if exists containers_set_updated_at on public.containers;
 create trigger containers_set_updated_at before update on public.containers for each row execute function public.set_updated_at();
+drop trigger if exists cargo_set_updated_at on public.cargo;
 create trigger cargo_set_updated_at before update on public.cargo for each row execute function public.set_updated_at();
+drop trigger if exists payment_methods_set_updated_at on public.payment_methods;
 create trigger payment_methods_set_updated_at before update on public.payment_methods for each row execute function public.set_updated_at();
+drop trigger if exists bank_accounts_set_updated_at on public.bank_accounts;
 create trigger bank_accounts_set_updated_at before update on public.bank_accounts for each row execute function public.set_updated_at();
+drop trigger if exists invoices_set_updated_at on public.invoices;
 create trigger invoices_set_updated_at before update on public.invoices for each row execute function public.set_updated_at();
+drop trigger if exists payments_set_updated_at on public.payments;
 create trigger payments_set_updated_at before update on public.payments for each row execute function public.set_updated_at();
+drop trigger if exists transactions_set_updated_at on public.transactions;
 create trigger transactions_set_updated_at before update on public.transactions for each row execute function public.set_updated_at();
+drop trigger if exists documents_set_updated_at on public.documents;
 create trigger documents_set_updated_at before update on public.documents for each row execute function public.set_updated_at();
+drop trigger if exists exchange_rates_set_updated_at on public.exchange_rates;
 create trigger exchange_rates_set_updated_at before update on public.exchange_rates for each row execute function public.set_updated_at();
+drop trigger if exists compliance_records_set_updated_at on public.compliance_records;
 create trigger compliance_records_set_updated_at before update on public.compliance_records for each row execute function public.set_updated_at();
+drop trigger if exists credit_profiles_set_updated_at on public.credit_profiles;
 create trigger credit_profiles_set_updated_at before update on public.credit_profiles for each row execute function public.set_updated_at();
+drop trigger if exists disputes_set_updated_at on public.disputes;
 create trigger disputes_set_updated_at before update on public.disputes for each row execute function public.set_updated_at();
+drop trigger if exists fees_set_updated_at on public.fees;
 create trigger fees_set_updated_at before update on public.fees for each row execute function public.set_updated_at();
+drop trigger if exists contracts_set_updated_at on public.contracts;
 create trigger contracts_set_updated_at before update on public.contracts for each row execute function public.set_updated_at();
 
 insert into storage.buckets (id, name, public)
 values ('documents', 'documents', false)
 on conflict (id) do nothing;
 
+drop policy if exists "authenticated document uploads" on storage.objects;
 create policy "authenticated document uploads" on storage.objects
 for insert to authenticated
 with check (bucket_id = 'documents');
 
+drop policy if exists "authenticated document reads" on storage.objects;
 create policy "authenticated document reads" on storage.objects
 for select to authenticated
 using (bucket_id = 'documents');

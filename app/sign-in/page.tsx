@@ -1,39 +1,7 @@
-"use client";
-
-import { useState, type FormEvent } from "react";
-import { useRouter, useSearchParams } from "next/navigation";
-import { createSupabaseBrowserClient } from "@/lib/supabase/browser";
+import { Suspense } from "react";
+import { AuthPanel } from "@/components/auth/auth-panel";
 
 export default function SignInPage(): JSX.Element {
-  const router = useRouter();
-  const searchParams = useSearchParams();
-  const [email, setEmail] = useState("");
-  const [password, setPassword] = useState("");
-  const [error, setError] = useState<string | null>(null);
-  const [submitting, setSubmitting] = useState(false);
-
-  async function handleSubmit(event: FormEvent<HTMLFormElement>) {
-    event.preventDefault();
-    setSubmitting(true);
-    setError(null);
-
-    const supabase = createSupabaseBrowserClient();
-    const { error: signInError } = await supabase.auth.signInWithPassword({
-      email,
-      password
-    });
-
-    if (signInError) {
-      setError(signInError.message);
-      setSubmitting(false);
-      return;
-    }
-
-    const redirectTo = searchParams.get("redirectTo") ?? "/dashboard";
-    router.push(redirectTo);
-    router.refresh();
-  }
-
   return (
     <div className="flex min-h-screen items-center justify-center px-4 py-12">
       <div className="grid w-full max-w-5xl overflow-hidden rounded-[2rem] bg-white shadow-card lg:grid-cols-[1.1fr_0.9fr]">
@@ -47,40 +15,11 @@ export default function SignInPage(): JSX.Element {
           </p>
         </div>
         <div className="p-8 sm:p-10">
-          <p className="section-title">Sign In</p>
-          <h2 className="mt-4 font-[var(--font-serif)] text-4xl text-ink">Access the operations console</h2>
-          <form className="mt-8 space-y-4" onSubmit={(event) => void handleSubmit(event)}>
-            <label className="block">
-              <span className="mb-2 block text-sm font-medium text-slate-700">Email</span>
-              <input
-                type="email"
-                value={email}
-                onChange={(event) => setEmail(event.target.value)}
-                className="w-full rounded-2xl border border-slate-200 px-4 py-3 text-sm outline-none transition focus:border-tide"
-                placeholder="ops@paycargo-blueprint.com"
-                required
-              />
-            </label>
-            <label className="block">
-              <span className="mb-2 block text-sm font-medium text-slate-700">Password</span>
-              <input
-                type="password"
-                value={password}
-                onChange={(event) => setPassword(event.target.value)}
-                className="w-full rounded-2xl border border-slate-200 px-4 py-3 text-sm outline-none transition focus:border-tide"
-                placeholder="••••••••"
-                required
-              />
-            </label>
-            {error ? <p className="rounded-2xl bg-rose-50 px-4 py-3 text-sm text-rose-700">{error}</p> : null}
-            <button
-              type="submit"
-              disabled={submitting}
-              className="w-full rounded-2xl bg-ink px-4 py-3 text-sm font-semibold text-white transition hover:bg-slate-800 disabled:opacity-60"
-            >
-              {submitting ? "Signing in..." : "Sign in"}
-            </button>
-          </form>
+          <p className="section-title">Authentication</p>
+          <h2 className="mt-4 font-[var(--font-serif)] text-4xl text-ink">Access or create your workspace</h2>
+          <Suspense fallback={<div className="mt-8 text-sm text-slate-500">Loading authentication form...</div>}>
+            <AuthPanel />
+          </Suspense>
         </div>
       </div>
     </div>
